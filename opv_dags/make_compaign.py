@@ -9,9 +9,10 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.subdag_operator import SubDagOperator
+from airflow.executors.sequential_executor import SequentialExecutor
 
 # OPV Import
-from opv_dags import create_dag_make_panorama
+from opv_dags import create_dag_make_panorama, create_make_panorama_tasks, create_make_all_panorama_tasks
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 from opv_api_client import RestClient
 from opv_tasks.utils import find_task
@@ -21,7 +22,14 @@ from opv_api_client.ressources import Campaign
 from operator import attrgetter
 
 
-def create_dag_make_compaign(name, id_malette, id_campaign, args, nb_worker):
+# def create_simplify_version(dag_name, id_malette, id_campaign, args):
+#     dag = DAG(
+#         dag_id=dag_name,
+#         default_args=args,
+#         schedule_interval=None,
+#     )
+
+def create_dag_make_compaign(name, id_malette, id_campaign, args, nb_worker, subdag=False):
     """
     Create a MakePanorama DAG
     The purpose of this function is to create a dag as followed:
@@ -42,6 +50,7 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args, nb_worker):
     :param id_campaign: The id_campaign to use
     :param args: Some args to use to create dags
     :param nb_worker: The number of worker
+    :param subdag: Use subdag
     :return: The new dag
     """
 
@@ -49,8 +58,8 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args, nb_worker):
         raise Exception("The nb_worker must greater than 0, actual value %s" % nb_worker)
 
     # dag_name = '%s.%s' % (parent_dag_name, "MakeCampaign_%s_%s" % (id_malette, id_campaign))
-    dag_name = "%s_%s_%s" % (name, id_malette, id_campaign)
-    print("Creating the dag %s" % dag_name)
+    dag_name = "%s_%s_%s" % ("subdag_%s" % name if subdag else name, id_malette, id_campaign)
+    #print("Creating the dag %s" % dag_name)
 
     dag = DAG(
         dag_id=dag_name,
@@ -96,21 +105,36 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args, nb_worker):
         i = 0
         for my_index in index_list:
 
-            # Create the dag
-            sub_dag_name = "MakePanorama_%s_%s" % (
-                lots[my_index].id_malette, lots[my_index].id_lot
-            )
-            sub_dag = SubDagOperator(
-                task_id=sub_dag_name,
-                subdag=create_dag_make_panorama(
-                    dag_name, sub_dag_name, lots[my_index].id_lot, lots[my_index].id_malette,
-                    args
-                ),
-                default_args=args,
-                dag=dag
-            )
-            last_dags[i].set_downstream(sub_dag)
-            last_dags[i] = sub_dag
+            if subdag:
+                # Create the dag
+                sub_dag_name = "MakePanorama_%s_%s" % (
+                    lots[my_index].id_malette, lots[my_index].id_lot
+                )
+                sub_dag = SubDagOperator(
+                    task_id=sub_dag_name,
+                    subdag=create_dag_make_panorama(
+                        dag_name, sub_dag_name, lots[my_index].id_lot, lots[my_index].id_malette,
+                        args
+                    ),
+                    default_args=args,
+                    executor=SequentialExecutor,
+                    dag=dag
+                )
+                last_dags[i].set_downstream(sub_dag)
+                last_dags[i] = sub_dag
+            elif subdag == "MARCHE_PAS_CAR_C_EST_LENT":
+                p_start, p_stop = create_make_panorama_tasks(
+                    dag, lots[my_index].id_lot, lots[my_index].id_malette, args
+                )
+                last_dags[i].set_downstream(p_start)
+                last_dags[i] = p_stop
+            else:
+                task = create_make_all_panorama_tasks(
+                    dag, lots[my_index].id_lot, lots[my_index].id_malette, args
+                )
+                last_dags[i].set_downstream(task)
+                last_dags[i] = task
+
             i += 1
 
         # Increment the index of the lots

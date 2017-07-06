@@ -17,6 +17,8 @@ args = {
     'retries': 1
 }
 
+NB_WORKER = 4
+
 # Get all the campaigns
 db_client = RestClient("http://OPV_Master:5000")
 campaigns = db_client.make_all(Campaign)
@@ -27,8 +29,15 @@ for campaign in campaigns:
             campaign.name, campaign.id_malette, campaign.id_campaign
         )
     )
+
+    # Sub_dag version
+    globals()[
+        "subdag_%s_%s_%s" % (campaign.name, campaign.id_malette, campaign.id_campaign)
+    ] = create_dag_make_compaign(
+        campaign.name, campaign.id_malette, campaign.id_campaign, args, NB_WORKER, subdag=True
+    )
     globals()[
         "%s_%s_%s" % (campaign.name, campaign.id_malette, campaign.id_campaign)
-    ] = create_dag_make_compaign(
-        campaign.name, campaign.id_malette, campaign.id_campaign, args, 2
+        ] = create_dag_make_compaign(
+        campaign.name, campaign.id_malette, campaign.id_campaign, args, NB_WORKER
     )

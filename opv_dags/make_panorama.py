@@ -145,20 +145,22 @@ def launchOPVTaskAll(ds, **kwargs):
 
     db_client = RestClient(opv_api)
 
-    for task_name in TASK_TO_DO:
+    try:
+        for task_name in TASK_TO_DO:
 
-        Task = find_task(task_name)
-        if not Task:
-            raise Exception('Task %s not found' % task_name)
+            Task = find_task(task_name)
+            if not Task:
+                raise Exception('Task %s not found' % task_name)
 
-        task = Task(
-            client_requestor=db_client,
-            opv_directorymanager_client=dir_manager_client
-        )
+            task = Task(
+                client_requestor=db_client,
+                opv_directorymanager_client=dir_manager_client
+            )
 
-        logging.info("Run '%s' with options=%s" % (task_name, options))
-        options = interpret_options(task.run(options=options))
-
+            logging.info("Run '%s' with options=%s" % (task_name, options))
+            options = interpret_options(task.run(options=options))
+    except Exception as e:
+        print(str(e))
     return "Ok"
 
 

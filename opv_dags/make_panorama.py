@@ -96,7 +96,7 @@ def launchOPVTask(ds, **kwargs):
         opv_directorymanager_client=dir_manager_client
     )
     logging.info("Run '%s' with options=%s" % (task_name, options))
-    return task.run(options=options)
+    return task.run(options=options).toJSON()["outputData"]
 
 
 def launchOPVTaskAll(ds, **kwargs):
@@ -105,14 +105,14 @@ def launchOPVTaskAll(ds, **kwargs):
     """
     logging.info("launchAllOPVTask(%s, %s)" % (ds, kwargs))
 
-    def interpret_options(string):
-        options = json.loads(string)
-        logging.info("Found options=%s" % options)
-        id_malette = options['id']['id_malette']
-        del options['id']['id_malette']
-        id_ressource = next(iter(options['id'].values()))
-        id_task = (id_ressource, id_malette)
-        return {"id": (id_ressource, id_malette)}
+    # def interpret_options(string):
+    #     options = json.loads(string)
+    #     logging.info("Found options=%s" % options)
+    #     id_malette = options['id']['id_malette']
+    #     del options['id']['id_malette']
+    #     id_ressource = next(iter(options['id'].values()))
+    #     id_task = (id_ressource, id_malette)
+    #     return {"id": (id_ressource, id_malette)}
 
     options = None
 
@@ -145,20 +145,20 @@ def launchOPVTaskAll(ds, **kwargs):
 
     db_client = RestClient(opv_api)
 
+    def run(dm_c, db_c, task_name, inputData):
+        """
+        Run task.
+        Return a TaskReturn.
+        """
+        Task = find_task(task_name)
+        if not Task:
+            raise Exception('Task %s not found' % task_name)
+
+        task = Task(client_requestor=db_c, opv_directorymanager_client=dm_c)
+        return task.run(options=inputData)
+
     try:
-        for task_name in TASK_TO_DO:
-
-            Task = find_task(task_name)
-            if not Task:
-                raise Exception('Task %s not found' % task_name)
-
-            task = Task(
-                client_requestor=db_client,
-                opv_directorymanager_client=dir_manager_client
-            )
-
-            logging.info("Run '%s' with options=%s" % (task_name, options))
-            options = interpret_options(task.run(options=options))
+        run(dir_manager_client, db_client, "makeall", options)
     except Exception as e:
         print(str(e))
     return "Ok"
@@ -175,10 +175,10 @@ def create_make_all_panorama_tasks(dag, id_lot, id_malette, args, priority_weigh
     """
     subdag_name = "%s." % dag_name if dag_name is not None else ""
 
-    name = "%s%s_%s_%s" % (subdag_name, "MakePanorama_%s_%s" % (id_malette, id_lot), id_malette, id_lot)
+    name = "%s%s_%s_%s" % (subdag_name, "MakeAllTaskForPanorama_%s_%s" % (id_malette, id_lot), id_malette, id_lot)
 
     opt = {
-        "OPV_Option": {"id": [id_lot, id_malette]}
+        "OPV_Option": {"id_lot": id_lot, "id_malette": id_malette}
     }
 
     task = PythonOperator(

@@ -164,11 +164,12 @@ def launchOPVTaskAll(ds, **kwargs):
     return "Ok"
 
 
-def create_make_all_panorama_tasks(dag, id_lot, id_malette, args, dag_name=None):
+def create_make_all_panorama_tasks(dag, id_lot, id_malette, args, priority_weight=1, dag_name=None):
     """
     Create all tasks for making a panorama
     :param id_lot:
     :param id_malette:
+    :param priority_weight: Priority weight of the task
     :param dag_name: The dag name if it's a subdag
     :return:
     """
@@ -186,6 +187,7 @@ def create_make_all_panorama_tasks(dag, id_lot, id_malette, args, dag_name=None)
         python_callable=launchOPVTaskAll,
         default_args=args,
         op_kwargs=opt,
+        priority_weight=priority_weight,
         dag=dag
     )
 

@@ -12,7 +12,7 @@ setup(
     name='opv_dags',
 
     # la version du code
-    version="0.0.1",
+    version="0.0.2",
 
     # Liste les packages à insérer dans la distribution
     # plutôt que de le faire à la main, on utilise la foncton
@@ -27,7 +27,7 @@ setup(
 
     # Votre email, sachant qu'il sera publique visible, avec tous les risques
     # que ça implique.
-    author_email="nouchet.christophe@gmail.com",
+    author_email="christophe.nouchet@openpathview.fr",
 
     # Une description courte
     description="OPV airflow dags'",

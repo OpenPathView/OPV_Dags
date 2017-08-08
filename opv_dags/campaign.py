@@ -12,37 +12,31 @@ from airflow.operators.subdag_operator import SubDagOperator
 from airflow.executors.sequential_executor import SequentialExecutor
 
 # OPV Import
-from opv_dags import create_dag_make_panorama, create_make_panorama_tasks, create_make_all_panorama_tasks
+from opv_dags import make_panorama
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 from opv_api_client import RestClient
 from opv_tasks.utils import find_task
 from  opv_api_client import RestClient, Filter
 from opv_api_client.ressources import Campaign
 
+import logging
 from operator import attrgetter
 
 
-# def create_simplify_version(dag_name, id_malette, id_campaign, args):
-#     dag = DAG(
-#         dag_id=dag_name,
-#         default_args=args,
-#         schedule_interval=None,
-#     )
-
-def create_dag_make_compaign(name, id_malette, id_campaign, args):
+def make_campaign(name, id_malette, id_campaign, args):
     """
-    Create a MakePanorama DAG
+    Create a MakePanorama operators in a new DAG
     The purpose of this function is to create a dag as followed:
 
 
                     #############################
-                ---># MakePanorama_Id_malette_1 #-----
+                ---># MakePanorama_Id-malette_1 #-----
                 |   #############################    |
     #########   |                                    |    #######
     # Start # ---                                    ---> # End #
     #########   |                                    |    #######
                 |   #############################    |
-                ---># MakePanorama_Id_malette_2 #-----
+                ---># MakePanorama_Id-malette_2 #-----
                     #############################
 
     :param name: The name of the campaign
@@ -52,6 +46,10 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args):
     :return: The new dag
     """
     dag_name = "%s_%s_%s" % (name, id_malette, id_campaign)
+
+    logging.debug("Creating the dag %s for id_malette=%s and id_campaign=%s" % (
+        dag_name, id_malette, id_campaign
+    ))
 
     dag = DAG(
         dag_id=dag_name,
@@ -71,7 +69,7 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args):
         dag=dag,
     )
 
-    # Get the lots from RestClient
+    # Get all sorted lot
     db_client = RestClient("http://OPV_Master:5000")
     lots = db_client.make(Campaign, id_campaign, id_malette).lots
     lots = sorted(lots, key=attrgetter('id_lot'))
@@ -79,7 +77,9 @@ def create_dag_make_compaign(name, id_malette, id_campaign, args):
     priority = len(lots) + 1
 
     for lot in lots:
-        task = create_make_all_panorama_tasks(
+        # Create the operator to make the panorama and link it with the start
+        # and end operator
+        task = make_panorama(
             dag, lot.id_lot, lot.id_malette, args,
             priority_weight=priority
         )

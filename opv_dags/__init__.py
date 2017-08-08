@@ -1,3 +1,3 @@
 
-from opv_dags.make_panorama import create_dag_make_panorama, create_make_panorama_tasks, create_make_all_panorama_tasks
-from opv_dags.make_compaign import create_dag_make_compaign
+from opv_dags.panorama import launchAllOPVTask, make_panorama
+from opv_dags.campaign import make_campaign

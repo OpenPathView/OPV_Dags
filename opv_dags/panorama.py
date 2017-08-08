@@ -56,7 +56,7 @@ def launchAllOPVTask(ds, **kwargs):
     )
 
     db_client = RestClient(opv_api)
-    
+
     try:
         run(dir_manager_client, db_client, "makeall", options)
     except Exception as e:
@@ -75,7 +75,7 @@ def make_panorama(dag, id_lot, id_malette, args, priority_weight=1, dag_name=Non
     """
     subdag_name = "%s." % dag_name if dag_name is not None else ""
 
-    name = "%s%s_%s_%s" % (subdag_name, "MakePanorama_%s_%s" % (id_malette, id_lot), id_malette, id_lot)
+    name = "%s%s_%s_%s" % (subdag_name, "MakePanorama", id_malette, id_lot)
 
     opt = {
         "OPV_Option": {"id_lot": id_lot, "id_malette": id_malette}
